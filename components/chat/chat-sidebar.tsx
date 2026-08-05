@@ -33,7 +33,7 @@ export function ChatSidebar({
     <aside className={cn("flex h-full w-72 shrink-0 flex-col border-r border-border bg-card/60", className)}>
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <Link href="/">
-          <Logo />
+          <Logo asLink={false} />
         </Link>
       </div>
 

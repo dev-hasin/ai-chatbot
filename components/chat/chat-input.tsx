@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ArrowUp, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,50 @@ export function ChatInput({
 }) {
   const [value, setValue] = useState("");
   const areaRef = useRef<HTMLTextAreaElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Diagnostic: periodically check whether the input root is visible and log details
+  useEffect(() => {
+    let mounted = true;
+    const check = () => {
+      if (!mounted) return;
+      const el = rootRef.current;
+      if (!el) return;
+      const rects = el.getClientRects();
+      const style = window.getComputedStyle(el);
+      const isVisible = rects.length > 0 && style.display !== "none" && style.visibility !== "hidden" && parseFloat(style.opacity) > 0;
+      if (!isVisible) {
+        const rect = el.getBoundingClientRect();
+        // find the topmost element at the center of the input root
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        let topEl: Element | null = null;
+        try {
+          topEl = document.elementFromPoint(cx, cy);
+        } catch (err) {
+          // ignore
+        }
+
+        console.warn("ChatInput hidden detected", {
+          rectsLength: rects.length,
+          display: style.display,
+          visibility: style.visibility,
+          opacity: style.opacity,
+          boundingClientRect: rect,
+          topmostElement: topEl
+            ? { tag: topEl.tagName, class: topEl.className, id: (topEl as HTMLElement).id }
+            : null,
+        });
+      }
+    };
+    const id = window.setInterval(check, 1000);
+    // also run on mount
+    check();
+    return () => {
+      mounted = false;
+      window.clearInterval(id);
+    };
+  }, []);
 
   function submit() {
     const trimmed = value.trim();
@@ -25,7 +69,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="border-t border-border bg-card/60 px-6 py-4">
+    <div ref={rootRef} className="sticky bottom-0 z-40 border-t border-border bg-card/60 px-6 py-4">
       <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-border bg-background px-3 py-2 shadow-sm focus-within:border-primary">
         <textarea
           ref={areaRef}

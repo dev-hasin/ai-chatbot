@@ -20,10 +20,22 @@ export function ChatWindow({
   onRetry: () => void;
 }) {
   const endRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const messages = conversation?.messages ?? [];
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const container = containerRef.current;
+    if (!container) {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      return;
+    }
+    try {
+      // Scroll to bottom so latest messages are visible above the sticky input
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    } catch (e) {
+      // fallback
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [messages.length, pending]);
 
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant" && !m.error)?.id;
@@ -41,7 +53,7 @@ export function ChatWindow({
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div ref={containerRef} className="flex-1 overflow-y-auto px-6 py-6 pb-36">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">

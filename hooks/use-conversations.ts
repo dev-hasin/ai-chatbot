@@ -72,16 +72,19 @@ export function useConversations() {
 
   const runTurn = useCallback(
     async (conversationId: string, text: string, replaceLastAssistant: boolean) => {
+      console.debug("runTurn start", { conversationId, text, replaceLastAssistant });
       setPending(true);
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
       try {
+        console.debug("sending chat message", { conversationId });
         const output = await sendChatMessage(
           { chatInput: text, userEmail, sessionId: conversationId },
           controller.signal
         );
+        console.debug("received chat output", { conversationId, output });
 
         setConversations((prev) =>
           prev.map((c) => {
@@ -98,7 +101,11 @@ export function useConversations() {
           })
         );
       } catch (e) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (e instanceof DOMException && e.name === "AbortError") {
+          console.debug("runTurn aborted", { conversationId });
+          return;
+        }
+        console.error("runTurn error", e);
         const message =
           e instanceof MissiveApiError ? e.message : "Something went wrong. Please try again.";
         setConversations((prev) =>
@@ -115,6 +122,11 @@ export function useConversations() {
           })
         );
       } finally {
+        console.debug("runTurn finally — clearing abortRef and setting pending=false", { conversationId });
+        // Clear the abortRef if it still points to this controller to avoid stale refs
+        if (abortRef.current?.signal?.aborted) {
+          abortRef.current = null;
+        }
         setPending(false);
       }
     },
@@ -169,7 +181,9 @@ export function useConversations() {
   );
 
   const stopGenerating = useCallback(() => {
+    console.debug("stopGenerating called");
     abortRef.current?.abort();
+    abortRef.current = null;
     setPending(false);
   }, []);
 
